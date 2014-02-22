@@ -1,0 +1,13 @@
+{
+  "name": "glibrary-server",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "3.4.8",
+    "jade": "^1.1.5",
+    "async": "^0.2.10"
+  }
+}
