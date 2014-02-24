@@ -30,8 +30,10 @@ if ('development' == app.get('env')) {
 
 app.get('/', routes.index);
 app.get('/repositories', repo.list);
+
 //app.get('/repositories/:repo', repo.list);
 app.post('/repositories/:repo', repo.create);
+app.get('/:repo', repo.listTypes);
 app.post('/:repo', repo.addType);
 app.post('/:repo/:type', repo.addEntry);
 app.get('/pwd', repo.pwd);

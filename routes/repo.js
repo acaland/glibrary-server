@@ -104,7 +104,7 @@ exports.addType = function(req, res) {
     }
 
     // extract attributes name and type from post form
-    for (attr in req.body) {
+    for (var attr in req.body) {
         if (attr.indexOf('__') != 0) {
             attributes.push(attr);
             schema += ' ' + attr + ' ' + req.body[attr];
@@ -222,7 +222,7 @@ exports.addEntry = function(req, res) {
         },
         function(entry_id, callback) {
             var values = "";
-            for (attr in req.body) {
+            for (var attr in req.body) {
                 values += attr + " " + req.body[attr];
             };
             AMGAexec("addentry " + path + "/" + entry_id + " " + values, callback);
@@ -239,3 +239,36 @@ exports.addEntry = function(req, res) {
         }
     });
 };
+
+exports.listTypes = function(req, res) {
+    var repo = req.params.repo;
+    var attrs = ['FILE','TypeName','Path','VisibleAttrs','FilterAttrs','ColumnWidth','ParentID'];
+    AMGAexec('selectattr /' + repo + '/Types:' + attrs.join(" ") + " ''", 
+        function(err, stdout, stderr) {
+            
+            if (!err) {
+                if (!stdout) {
+                    var results = [];
+                } else {
+                    var results = stdout.split("\n");
+                }
+                console.log(JSON.stringify(results) + results.length/attrs.length);
+                var types = [];
+                for (var i=0; i < results.length / attrs.length; i++) {
+                    var type = {};
+                    for (var j=0; j < attrs.length; j++) {
+                        type[attrs[j]] = results[i*attrs.length+j];
+                    }
+                    type['id'] = type['FILE'];
+                    delete type['FILE'];
+                    type['Type'] = type['Path'].replace(/.*\//, '');
+                    types.push(type);
+                }
+                res.json({results: types});
+            } else {
+                res.json({error: err});
+            }
+    });
+};
+
+
