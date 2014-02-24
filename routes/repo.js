@@ -4,7 +4,8 @@ var async = require('async');
 
 function AMGAexec(command, callback) {
     execFile('/usr/bin/mdcli', [command], function(error, stdout, stderr) {
-        console.log('amga> ' + command + '\n' + stdout);
+        console.log('amga> ' + command);
+        //console.log(stdout);
         if (error !== null) {
             console.log('stderr: ' + stderr);
             console.log('exec error: ' + error);
@@ -252,7 +253,7 @@ exports.listTypes = function(req, res) {
                 } else {
                     var results = stdout.split("\n");
                 }
-                console.log(JSON.stringify(results) + results.length/attrs.length);
+                //console.log(JSON.stringify(results) + results.length/attrs.length);
                 var types = [];
                 for (var i=0; i < results.length / attrs.length; i++) {
                     var type = {};
@@ -355,4 +356,50 @@ exports.editType = function(req, res) {
     });
 };
 
+exports.listEntries = function(req, res) {
+    var repo = req.params.repo;
+    var type = req.params.type;
+    var path = "";
+    var attrs = [];
+
+    async.waterfall([
+        function(callback) {
+            AMGAexec("selectattr /" + repo + "/Types:Path 'like(Path, " + '"%/' + type + '")' + "'", callback)
+        },
+        function(p, callback) {
+            path = p;
+            AMGAexec("listattr " + path, callback);
+        },
+        function(results, callback) {
+            var stdout = results.split("\n");
+            //console.log(stdout);
+            attrs.push('id');
+            for (var i=0; i < stdout.length; i+=2) {
+                attrs.push(stdout[i]);
+            }
+            //console.log(attrs);
+            AMGAexec("SELECT * FROM " + path + " LIMIT 100", callback);
+        }   
+    ], function(err, data) {
+        if (err) {
+            res.json({error: err});
+        } else {
+            var results = data.split("\n").slice(attrs.length);
+
+            var entries = [];
+            for (var i=0; i < results.length / attrs.length; i++) {
+                var entry = {};
+                for (var j=0; j < attrs.length; j++) {
+                    entry[attrs[j]] = results[i*attrs.length+j];
+                }
+                //type['id'] = type['FILE'];
+                //delete type['FILE'];
+                //type['Type'] = type['Path'].replace(/.*\//, '');
+                entries.push(entry);
+            }
+
+            res.json({results: entries});
+        }
+    });
+};
 

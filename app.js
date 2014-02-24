@@ -35,6 +35,7 @@ app.get('/repositories', repo.list);
 app.post('/repositories/:repo', repo.create);
 app.get('/:repo', repo.listTypes);
 app.post('/:repo', repo.addType);
+app.get('/:repo/:type', repo.listEntries);
 app.post('/:repo/:type/', repo.addEntry);
 app.put('/:repo/:type', repo.editType); // add attributes to a Type
 app.get('/pwd', repo.pwd);
