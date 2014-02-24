@@ -35,7 +35,8 @@ app.get('/repositories', repo.list);
 app.post('/repositories/:repo', repo.create);
 app.get('/:repo', repo.listTypes);
 app.post('/:repo', repo.addType);
-app.post('/:repo/:type', repo.addEntry);
+app.post('/:repo/:type/', repo.addEntry);
+app.put('/:repo/:type', repo.editType); // add attributes to a Type
 app.get('/pwd', repo.pwd);
 
 http.createServer(app).listen(app.get('port'), function(){

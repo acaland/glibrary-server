@@ -271,4 +271,88 @@ exports.listTypes = function(req, res) {
     });
 };
 
+exports.editType = function(req, res) {
+    var repo = req.params.repo;
+    var type = req.params.type;
+
+    
+    var typeName = req.body.__TypeName || '';
+
+    // extract attributes name and type from post form
+    var schema = "";
+    for (var attr in req.body) {
+        if (attr.indexOf('__') != 0) {
+            //attributes.push(attr);
+            schema += ' ' + attr + ' ' + req.body[attr];
+        }
+    };
+    console.log("schema: " + schema);
+    
+    var visibleAttrs = req.body.__VisibleAttrs || '';
+    var filterAttrs = req.body.__FilterAttrs || '';
+    var columnWidth = req.body.__ColumnWidth || '';
+    var parentId = req.body.__ParentID || '';
+
+
+    //console.log(filterAttrs, JSON.stringify(filterAttrs));
+    async.waterfall([
+        function(callback) {
+            AMGAexec("selectattr /" + repo + "/Types:Path FILE 'like(Path, " + '"%/' + type + '")' + "'", callback)
+        },
+        
+        function(result, callback) {
+            if (!result) {
+                callback("no type found");
+            } else {
+                var path = result.split('\n')[0];
+                var id = result.split('\n')[1];
+                var cmd = '';
+                if (typeName) {
+                    cmd += ' Typename ' + typeName;
+                }
+                if (visibleAttrs) {
+                    cmd += ' VisibleAttrs \'' + visibleAttrs + "'"; 
+                }
+                if (filterAttrs) {
+                    cmd += ' FilterAttrs \'' + filterAttrs + "'";
+                }
+                if (columnWidth) {
+                    cmd += ' ColumnWidth \'' + columnWidth + "'";
+                }
+                if (parentId) {
+                    cmd += ' ParentID ' + parentId;
+                }
+                var toRun = [];
+                if (cmd) {
+                    cmd = 'setattr /' + repo + '/Types/' + id + cmd;
+                    console.log(cmd);
+                    toRun.push(cmd);
+                }
+                if (schema) {
+                    var cmd2 = 'addattr ' + path + schema;
+                    console.log(cmd2);
+                    toRun.push(cmd2);
+                }
+                async.each(toRun, AMGAexec, function(err, results) {
+                        if (!err) {
+                            callback(null);
+                        } else {
+                            callback(err);
+                        }
+                });
+                
+            }
+        }], function(err, result) {
+        if (err) {
+            res.json({
+                'error': err
+            });
+        } else {
+            res.json({
+                'results': "success"
+            });
+        }
+    });
+};
+
 
