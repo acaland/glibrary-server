@@ -14,6 +14,7 @@ function AMGAexec(command, callback) {
         } else {
             //console.log(stdout)
             //if (stdout) {
+                //console.log('la sto per chiamare');
                 callback(null, stdout.trim());
             //} else {
             //    callback(null);
@@ -119,7 +120,7 @@ exports.addType = function(req, res) {
     if (req.body.__VisibleAttrs) {
         var visibleAttrs = req.body.__VisibleAttrs;
     } else {
-        var visibleAttrs = 'Thumbs FileName Description FileType';
+        var visibleAttrs = 'Thumb FileName Description FileType';
         for (var i = 0; i < 3 && i < attributes.length; i++) {
             visibleAttrs += ' ' + attributes[i]
         }
@@ -205,7 +206,14 @@ exports.addEntry = function(req, res) {
     var repo = req.params.repo;
     var type = req.params.type;
     var path = "";
+    var id = "";
 
+    if (req.body.__Replicas) {
+        var replicas = req.body.__Replicas.split(','); 
+    } else {
+        var replicas = null;
+    }
+    //var replicas = req.body.__Replicas || '';
 
     async.waterfall([
         function(callback) {
@@ -223,10 +231,50 @@ exports.addEntry = function(req, res) {
         },
         function(entry_id, callback) {
             var values = "";
+            id = entry_id;
             for (var attr in req.body) {
-                values += attr + " " + req.body[attr];
+                if (attr.indexOf('__') != 0) {
+                    values += " " + attr + " '" + req.body[attr] + "'";
+                }
             };
-            AMGAexec("addentry " + path + "/" + entry_id + " " + values, callback);
+            AMGAexec("addentry " + path + "/" + entry_id + values, callback);
+        },
+        function(callback) {
+            if (replicas) {
+                async.eachSeries(replicas, function(replica, callback2) {
+                    async.waterfall([
+                        function(callback3) {
+                            AMGAexec('sequence_next /' + repo + '/Replicas/rep', callback3)
+                        },
+                        //async.apply(, 'sequence_next /' + repo + '/Replicas/rep'),
+                        function(rep_id, callback3) {
+                            AMGAexec('addentry /' + repo + '/Replicas/' + rep_id + ' ID ' + id + ' surl ' + replica + ' enabled 1', callback3);
+                        }
+                    ], function(err, result) {
+                        if (!err) {
+
+                            callback2();
+                        } 
+                    });
+                }, function (err, results) {
+                    //console.log("ci arrivo qui?");
+                    if (err) {
+                        callback(err)
+                    } else {
+                        console.log(JSON.stringify(callback));
+                        res.json({
+                            'results': "success"
+                        });
+                        //callback(null);
+                    }
+                    //console.log(" e qui, ci arrivo qui?"); 
+                    
+
+                });
+                //console.log("qui fisce async");
+                //console.log(" e qui no invece");
+                //callback();
+            }
         }
     ], function(err, result) {
         if (err) {
