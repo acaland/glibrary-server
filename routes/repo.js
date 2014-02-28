@@ -15,6 +15,7 @@ function AMGAexec(command, callback) {
             //console.log(stdout)
             //if (stdout) {
                 //console.log('la sto per chiamare');
+                
                 callback(null, stdout.trim());
             //} else {
             //    callback(null);
@@ -208,11 +209,23 @@ exports.addEntry = function(req, res) {
     var path = "";
     var id = "";
 
+    //console.log("body:");
+    //console.log(req.body);
+
+
     if (req.body.__Replicas) {
         var replicas = req.body.__Replicas.split(','); 
     } else {
         var replicas = null;
     }
+
+    if (req.body.__ThumbData) {
+        var thumbdata = req.body.__ThumbData;
+
+    } else {
+        var thumbdata = null;
+    }
+    //console.log("thumbdata: "  + JSON.stringify(req.body));
     //var replicas = req.body.__Replicas || '';
 
     async.waterfall([
@@ -230,6 +243,28 @@ exports.addEntry = function(req, res) {
             }
         },
         function(entry_id, callback) {
+            if (thumbdata) {
+                var thumb_id = "";
+                async.waterfall([
+                    async.apply(AMGAexec, "sequence_next /" + repo + "/Thumbs/id"),
+                    function(id, callback2) {
+                        thumb_id = id;
+                        AMGAexec('addentry /' + repo + '/Thumbs/' + thumb_id + ' Data ' + thumbdata, callback2)
+                    }
+                    ], function(err, results) {
+
+                        if (err) {
+                            callback(err);
+                        } else {
+                            callback(null, entry_id, thumb_id);
+
+                        }
+                    })
+            } else {
+                callback(null, entry_id, null);
+            }
+        },
+        function(entry_id, thumb_id, callback) {
             var values = "";
             id = entry_id;
             for (var attr in req.body) {
@@ -237,18 +272,21 @@ exports.addEntry = function(req, res) {
                     values += " " + attr + " '" + req.body[attr] + "'";
                 }
             };
+            if (thumb_id) {
+                values += " Thumb " + thumb_id;
+            };
             AMGAexec("addentry " + path + "/" + entry_id + values, callback);
         },
-        function(callback) {
+        function(result, callback) {
             if (replicas) {
                 async.eachSeries(replicas, function(replica, callback2) {
                     async.waterfall([
-                        function(callback3) {
-                            AMGAexec('sequence_next /' + repo + '/Replicas/rep', callback3)
+                        function(callback) {
+                            AMGAexec('sequence_next /' + repo + '/Replicas/rep', callback)
                         },
                         //async.apply(, 'sequence_next /' + repo + '/Replicas/rep'),
-                        function(rep_id, callback3) {
-                            AMGAexec('addentry /' + repo + '/Replicas/' + rep_id + ' ID ' + id + ' surl ' + replica + ' enabled 1', callback3);
+                        function(rep_id, callback) {
+                            AMGAexec('addentry /' + repo + '/Replicas/' + rep_id + ' ID ' + id + ' surl ' + replica + ' enabled 1', callback);
                         }
                     ], function(err, result) {
                         if (!err) {
@@ -261,11 +299,10 @@ exports.addEntry = function(req, res) {
                     if (err) {
                         callback(err)
                     } else {
-                        console.log(JSON.stringify(callback));
-                        res.json({
-                            'results': "success"
-                        });
-                        //callback(null);
+                        //res.json({
+                        //    'results': "success"
+                        //});
+                        callback(null);
                     }
                     //console.log(" e qui, ci arrivo qui?"); 
                     
@@ -274,6 +311,8 @@ exports.addEntry = function(req, res) {
                 //console.log("qui fisce async");
                 //console.log(" e qui no invece");
                 //callback();
+            } else {
+                callback(null);
             }
         }
     ], function(err, result) {
