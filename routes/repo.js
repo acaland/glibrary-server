@@ -443,11 +443,70 @@ exports.editType = function(req, res) {
     });
 };
 
+exports.getEntry = function(req, res) {
+    var repo = req.params.repo;
+    var type = req.params.type;
+    var id = req.params.id;
+    var path = "";
+    var attrs = [];
+    var entry = {};
+
+    async.waterfall([
+        async.apply(AMGAexec, "selectattr /" + repo + "/Types:Path 'like(Path, " + '"%/' + type + '")' + "'"),
+        function(p, callback) {
+            path = p;
+            AMGAexec("listattr " + path, callback);
+        },
+        function(results, callback) {
+            var stdout = results.split("\n");
+            attrs.push('id');
+            for (var i=0; i < stdout.length; i+=2) {
+                attrs.push(stdout[i]);
+            }
+            AMGAexec("SELECT * FROM " + path + " WHERE " + path + ':FILE=' + id, callback);
+        },  
+        function(data, callback) {
+            var results = data.split("\n").slice(attrs.length);
+            //var entry = {};
+            for (var i=0; i < results.length; i++) {
+                entry[attrs[i]] = results[i];
+            }
+            callback(null, entry);           
+        },
+        function(entry, callback) {
+            AMGAexec("selectattr /" + repo + "/Replicas:surl enabled 'ID="+id +"'", callback)
+        },
+        function(results, callback) {
+            if (results) {
+                var replicas = results.split("\n");
+                console.log(replicas);
+                console.log(replicas.length);
+                var _replicas = [];
+                for (var i=0; i<=replicas.length/3; i++) {
+                    _replicas[i] = {"url": replicas[i*2], "enabled":replicas[(i*2)+1]}
+                }
+                entry['Replicas'] = _replicas
+            }
+            
+            callback(null, entry);
+        }
+    ], function(err, entry) {
+       if (err) {
+            res.json({error: err});
+        } else {
+            res.json({results: entry}); 
+        } 
+    });
+};
+
+
+
 exports.listEntries = function(req, res) {
     var repo = req.params.repo;
     var type = req.params.type;
     var path = "";
     var attrs = [];
+    var count = 0;
 
     async.waterfall([
         function(callback) {
@@ -464,9 +523,20 @@ exports.listEntries = function(req, res) {
             for (var i=0; i < stdout.length; i+=2) {
                 attrs.push(stdout[i]);
             }
+            AMGAexec("SELECT COUNT(*) FROM " + path, callback);
             //console.log(attrs);
-            AMGAexec("SELECT * FROM " + path + " LIMIT 100", callback);
-        }   
+            
+            //AMGAexec("SELECT * FROM " + path + ", /" + repo +"/Replicas WHERE " +
+            //    path + ":FILE=/" + repo + "/Replicas.ID", callback);
+        },   
+        function(results, callback) {
+            count = results.split("\n")[1];
+            if (count) {
+               AMGAexec("SELECT * FROM " + path + " LIMIT 100", callback); 
+           } else {
+                callback("no entries");
+           }
+        }
     ], function(err, data) {
         if (err) {
             res.json({error: err});
@@ -485,7 +555,7 @@ exports.listEntries = function(req, res) {
                 entries.push(entry);
             }
 
-            res.json({results: entries});
+            res.json({results: entries, total: count});
         }
     });
 };
