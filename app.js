@@ -29,16 +29,26 @@ if ('development' == app.get('env')) {
 }
 
 app.get('/', routes.index);
-app.get('/repositories', repo.list);
 
-//app.get('/repositories/:repo', repo.list);
+// List available repositories
+app.get('/repositories', repo.list);
+// Create a new repository
 app.post('/repositories/:repo', repo.create);
+// List the Types of a given repository
 app.get('/:repo', repo.listTypes);
+// Add a new Type to a given repository
 app.post('/:repo', repo.addType);
+// List all the entries e its metadata of a given Type in a repository (default limit to 100)
 app.get('/:repo/:type', repo.listEntries);
+// get Entry metadata with Replicas for a given Entry
 app.get('/:repo/:type/:id', repo.getEntry);
+// edit the Entry with the given id
+app.put('/:repo/:type/:id', repo.editEntry);
+// add a new Entry to a Type
 app.post('/:repo/:type/', repo.addEntry);
-app.put('/:repo/:type', repo.editType); // add attributes to a Type
+// add/edit attributes to a Type
+app.put('/:repo/:type', repo.editType);
+
 app.get('/pwd', repo.pwd);
 
 http.createServer(app).listen(app.get('port'), function(){

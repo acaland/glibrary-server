@@ -504,6 +504,8 @@ exports.getEntry = function(req, res) {
 exports.listEntries = function(req, res) {
     var repo = req.params.repo;
     var type = req.params.type;
+    var limit = (!req.query.limit || req.query.limit > 100) ? 100 : req.query.limit;
+    var offset = req.query.offset || 0;
     var path = "";
     var attrs = [];
     var count = 0;
@@ -532,7 +534,7 @@ exports.listEntries = function(req, res) {
         function(results, callback) {
             count = results.split("\n")[1];
             if (count) {
-               AMGAexec("SELECT * FROM " + path + " LIMIT 100", callback); 
+               AMGAexec("SELECT * FROM " + path + " LIMIT " + limit + " OFFSET " + offset, callback); 
            } else {
                 callback("no entries");
            }
@@ -556,6 +558,109 @@ exports.listEntries = function(req, res) {
             }
 
             res.json({results: entries, total: count});
+        }
+    });
+};
+
+exports.editEntry = function(req, res) {
+    var repo = req.params.repo;
+    var type = req.params.type;
+    var id = req.params.id;
+
+    if (req.body.__Replicas) {
+        var new_replicas = req.body.__Replicas.split(','); 
+    } else {
+        var new_replicas = null;
+    }
+    //console.log("new replicas:" + JSON.stringify(new_replicas));
+
+    if (req.body.__ThumbData) {
+        var thumbdata = req.body.__ThumbData;
+    } else {
+        var thumbdata = null;
+    }
+
+    var values = "";
+            //id = entry_id;
+    for (var attr in req.body) {
+        if (attr.indexOf('__') != 0) {
+            values += " " + attr + " '" + req.body[attr] + "'";
+        }
+    };
+
+    async.waterfall([
+        async.apply(AMGAexec, "selectattr /" + repo + "/Types:Path 'like(Path, " + '"%/' + type + '")' + "'"),
+        function(path, callback) {
+            AMGAexec('setattr ' + path + values, callback);
+        },
+        function (results, callback) {
+            if (new_replicas) {
+                // check first if the entry has previous replicas
+                async.waterfall([
+                    async.apply(AMGAexec, 'selectattr /' + repo + '/Replicas:FILE ' + "'ID=" + id +"'"),
+                    function (replicas, callback) {
+
+                        var old_replicas = replicas.split('\n');
+                        if (old_replicas[0] == "") {
+                            old_replicas.splice(0,1);
+                        }
+                        //console.log("old_replicas = " + JSON.stringify(old_replicas) + old_replicas.length);
+                        if (old_replicas.length) {
+                           
+                            async.each(old_replicas, 
+                                function(rep, callback) {
+                                    AMGAexec('rm /' + repo + '/Replicas/' + rep, callback);
+                                }, 
+                                function (err) {
+                                    if (!err) {
+                                        callback(); //delete old_replicas e continue the waterfall 
+                                    } else {
+                                        callback(err);
+                                    }
+                                }
+                            );
+                        } else {
+                            callback(); // just continue the waterfall
+                        }
+                    },
+                    function (callback) {
+                        // create the new replicas
+                        async.each(new_replicas, function(replica, callback2) {
+                            async.waterfall([
+                                function(callback) {
+                                    AMGAexec('sequence_next /' + repo + '/Replicas/rep', callback)
+                                },
+                                //async.apply(, 'sequence_next /' + repo + '/Replicas/rep'),
+                                function(rep_id, callback) {
+                                    AMGAexec('addentry /' + repo + '/Replicas/' + rep_id + ' ID ' + id + ' surl ' + replica + ' enabled 1', callback);
+                                }
+                            ], function(err, result) {
+                                if (!err) {
+                                    callback();
+                                } else {
+                                    console.log("errore nella creazione della replica" + err);
+                                    callback(err);
+                                }
+                            });
+                        });
+                    }
+                ], function(err) {
+                    // console.log("ci arrivo?");
+                    if (err) {
+                        callback(err);
+                    } else {
+                        callback();
+                    }
+                });
+            } else {
+                callback();
+            }
+        }
+    ], function (err) {
+        if (!err) {
+            res.json({success: true});
+        } else {
+            res.json({success: false, error: err});
         }
     });
 };
