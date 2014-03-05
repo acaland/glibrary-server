@@ -371,7 +371,7 @@ exports.editType = function(req, res) {
     for (var attr in req.body) {
         if (attr.indexOf('__') != 0) {
             //attributes.push(attr);
-            schema += ' ' + attr + ' ' + req.body[attr];
+            schema += ' ' + attr + " '" + req.body[attr] + "'";
         }
     };
     console.log("schema: " + schema);
@@ -396,7 +396,7 @@ exports.editType = function(req, res) {
                 var id = result.split('\n')[1];
                 var cmd = '';
                 if (typeName) {
-                    cmd += ' Typename ' + typeName;
+                    cmd += " TypeName '" + typeName + "'";
                 }
                 if (visibleAttrs) {
                     cmd += ' VisibleAttrs \'' + visibleAttrs + "'"; 
@@ -587,11 +587,23 @@ exports.editEntry = function(req, res) {
             values += " " + attr + " '" + req.body[attr] + "'";
         }
     };
+    //console.log("body:" + Boolean(values));
+
 
     async.waterfall([
         async.apply(AMGAexec, "selectattr /" + repo + "/Types:Path 'like(Path, " + '"%/' + type + '")' + "'"),
         function(path, callback) {
-            AMGAexec('setattr ' + path + values, callback);
+           // if (!values.trim()) {
+            if (values) {
+                AMGAexec('setattr ' + path + '/' + id + values, callback);
+            } else {
+                callback(null, "ok");
+            }
+                
+            //} else {
+            //    callback(null);
+           // }
+            
         },
         function (results, callback) {
             if (new_replicas) {
@@ -643,6 +655,14 @@ exports.editEntry = function(req, res) {
                                 }
                             });
                         });
+                    },
+                    function (callback) {
+                        if (thumbdata) {
+                            
+                            AMGAexec('setattr /' + repo + "/Thumbs/" + id + " Data '" + thumbdata + "'", callback);
+                        } else {
+                            callback();
+                        }
                     }
                 ], function(err) {
                     // console.log("ci arrivo?");
