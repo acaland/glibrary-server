@@ -28,6 +28,12 @@ if ('development' == app.get('env')) {
   app.use(express.errorHandler());
 }
 
+app.all('*', function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "X-Requested-With,X-Titanium-Id");
+  next();
+});
+
 app.get('/', routes.index);
 
 // List available repositories
@@ -38,8 +44,10 @@ app.post('/repositories/:repo', repo.create);
 app.get('/:repo', repo.listTypes);
 // Add a new Type to a given repository
 app.post('/:repo', repo.addType);
+// get Schema of a given type
+app.get('/:repo/:type', repo.getSchema);
 // List all the entries e its metadata of a given Type in a repository (default limit to 100)
-app.get('/:repo/:type', repo.listEntries);
+app.get('/:repo/:type/entries', repo.listEntries);
 // get Entry metadata with Replicas for a given Entry
 app.get('/:repo/:type/:id', repo.getEntry);
 // edit the Entry with the given id

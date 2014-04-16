@@ -57,6 +57,51 @@ exports.pwd = function(req, res) {
     });
 }
 
+exports.getSchema = function(req, res) {
+	var repo = req.params.repo;
+	var type = req.params.type;
+	var attrs = ['FILE','TypeName','Path','VisibleAttrs','FilterAttrs','ColumnWidth','ParentID'];
+	async.waterfall([
+		function(callback) {
+    	AMGAexec('selectattr /' + repo + '/Types:' + attrs.join(" ") + " 'like(Path, " + '"%' + type + '")' + "'",
+		function(error, stdout) {
+			console.log(stdout);
+			if (!error && stdout) {
+				var results = stdout.split("\n");	
+				var type = {};
+                    		for (var j=0; j < attrs.length; j++) {
+                        		type[attrs[j]] = results[j];
+                    		}
+                    		type['id'] = type['FILE'];
+                    		delete type['FILE'];
+                    		type['Type'] = type['Path'].replace(/.*\//, '');
+				callback(null, type)
+			} else {
+				callback(error, {'error': 'No type has been found'});
+			}
+	});
+	}, function(type, callback) {
+		AMGAexec('listattr /' + type.Path, function(error, stdout) {
+			if (!error) {
+				var results = stdout.split("\n");
+				for (var i=0; i < results.length; i=i+2) {
+					type[results[i]] = results[i+1];
+				}
+				callback(null, type);
+			} else {
+				callback(error, {'error': error});
+			}
+		});
+	}], function(err, result) {
+		if (err) {
+			res.json({'error': err});
+		} else {
+			res.json(result);
+		}
+	});
+}
+
+
 exports.create = function(req, res) {
     var repo = req.params.repo;
     commands = [
@@ -91,7 +136,8 @@ exports.addType = function(req, res) {
 	var repo = req.params.repo;
 	var attributes = [];
     var schema = "";
-
+	
+    //console.log("body: ", req.body);
     if (!req.body.__Type) {
         res.json({
             'error': 'You need to set __Type param at least'
