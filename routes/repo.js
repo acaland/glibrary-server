@@ -368,7 +368,8 @@ exports.addEntry = function(req, res) {
             });
         } else {
             res.json({
-                'results': "success"
+                'results': "success",
+		'id': id
             });
         }
     });
@@ -730,4 +731,36 @@ exports.editEntry = function(req, res) {
         }
     });
 };
+
+exports.deleteEntry = function(req, res) {
+	var repo = req.params.repo;
+	var type = req.params.type;
+	var id = req.params.id;
+	
+	// let's look for the path of the entry
+	async.waterfall([
+        	async.apply(AMGAexec, "selectattr /" + repo + "/Types:Path 'like(Path, " + '"%/' + type + '")' + "'"),
+		function (path, callback) {
+			if (path) {
+				AMGAexec('rm ' + path + '/' + id, callback);
+			} else {
+				callback("nopath", "path not found");
+			}
+                },
+		function (results, callback) {
+			AMGAexec('rm /' + repo + '/Replicas/ ID=' + id, callback);
+		}
+	], function (err, results) {
+		if (!err) {
+			res.json({success:true});
+		} else {
+			if (err == "nopath") {
+				res.json({succes: false, error: results});
+			} else {
+				res.json({success: false, error: "entry or replica not found"});
+
+			}
+		}
+	});
+}
 

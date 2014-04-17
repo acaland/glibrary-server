@@ -56,6 +56,8 @@ app.put('/:repo/:type/:id', repo.editEntry);
 app.post('/:repo/:type/', repo.addEntry);
 // add/edit attributes to a Type
 app.put('/:repo/:type', repo.editType);
+// remove the Entry with the given id from Type
+app.delete('/:repo/:type/:id', repo.deleteEntry);
 
 app.get('/pwd', repo.pwd);
 
