@@ -63,7 +63,7 @@ exports.getSchema = function(req, res) {
 	var attrs = ['FILE','TypeName','Path','VisibleAttrs','FilterAttrs','ColumnWidth','ParentID'];
 	async.waterfall([
 		function(callback) {
-    	AMGAexec('selectattr /' + repo + '/Types:' + attrs.join(" ") + " 'like(Path, " + '"%' + type + '")' + "'",
+    	AMGAexec('selectattr /' + repo + '/Types:' + attrs.join(" ") + " 'like(Path, " + '"%/' + type + '")' + "'",
 		function(error, stdout) {
 			console.log(stdout);
 			if (!error && stdout) {
@@ -276,7 +276,7 @@ exports.addEntry = function(req, res) {
 
     async.waterfall([
         function(callback) {
-            AMGAexec("selectattr /" + repo + "/Types:Path 'like(Path, " + '"%' + type + '")' + "'", callback)
+            AMGAexec("selectattr /" + repo + "/Types:Path 'like(Path, " + '"%/' + type + '")' + "'", callback)
         },
         
         function(p, callback) {
