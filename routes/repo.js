@@ -256,6 +256,7 @@ exports.addEntry = function(req, res) {
     var type = req.params.type;
     var path = "";
     var id = "";
+    var typeid = "";
 
     //console.log("body:");
     //console.log(req.body);
@@ -278,15 +279,16 @@ exports.addEntry = function(req, res) {
 
     async.waterfall([
         function(callback) {
-            AMGAexec("selectattr /" + repo + "/Types:Path 'like(Path, " + '"%/' + type + '")' + "'", callback)
+            AMGAexec("selectattr /" + repo + "/Types:Path FILE 'like(Path, " + '"%/' + type + '")' + "'", callback)
         },
         
-        function(p, callback) {
+        function(result, callback) {
             //console.log("p:" + JSON.stringify(p));
-            if (!p) {
+            if (!result) {
                 callback("no type found");
             } else {
-                path = p;
+                path = result.split("\n")[0];
+		typeid = result.split("\n")[1];
                 AMGAexec("sequence_next /" + repo + "/Entries/id", callback);
             }
         },
@@ -310,20 +312,25 @@ exports.addEntry = function(req, res) {
                     })
             } else {
 		var thumb_id = 0;
+		//console.log("no thumb passed, so default to: " + thumb_id);
                 callback(null, entry_id, thumb_id);
             }
         },
         function(entry_id, thumb_id, callback) {
-            var values = "";
+            //console.log("thumb_id=" + thumb_id);
+	    var values = "";
             id = entry_id;
             for (var attr in req.body) {
                 if (attr.indexOf('__') != 0) {
                     values += " " + attr + " '" + req.body[attr] + "'";
                 }
             };
-            if (thumb_id) {
-                values += " Thumb " + thumb_id;
-            };
+            //if (thumb_id || thumb_id == 0) {
+            values += " Thumb " + thumb_id;
+            //};
+	    if (typeid) {
+	    	values += " TypeID " + typeid;
+	    };
             AMGAexec("addentry " + path + "/" + entry_id + values, callback);
         },
         function(result, callback) {
