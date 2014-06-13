@@ -7,6 +7,7 @@ var express = require('express');
 var routes = require('./routes');
 var user = require('./routes/user');
 var repo = require('./routes/repo');
+var util = require('./routes/util');
 var http = require('http');
 var path = require('path');
 
@@ -20,6 +21,8 @@ app.use(express.logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded());
 app.use(express.methodOverride());
+//app.use(express.bodyParser({keepExtensions:true,uploadDir:path.join(__dirname,'/files')}));
+//app.use(express.multipart());
 app.use(app.router);
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -35,6 +38,8 @@ app.all('*', function(req, res, next) {
 });
 
 app.get('/', routes.index);
+
+app.post('/xml2json', util.xml2json);
 
 // List available repositories
 app.get('/repositories', repo.list);
@@ -60,6 +65,7 @@ app.put('/:repo/:type', repo.editType);
 app.delete('/:repo/:type/:id', repo.deleteEntry);
 
 app.get('/pwd', repo.pwd);
+
 
 http.createServer(app).listen(app.get('port'), function(){
   console.log('Express server listening on port ' + app.get('port'));
