@@ -264,7 +264,7 @@ function registerWarcMetadata(fields, warc, _cb) {
                 }
             };
             if (fields['Thumb'] == '') {
-            	 values += " Thumb " + 0;
+            	 values += " Thumb " + 1;
             }
             AMGAexec("addentry /MagDigitali/Entries/WARC/" + entry_id + values, callback);
         },
