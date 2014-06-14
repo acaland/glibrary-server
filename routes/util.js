@@ -249,6 +249,40 @@ function prepareAndRegisterMetadata(cdxfile, xmlfile, warc, _cb) {
     });
 }
 
+function registerWarcMetadata(fields, warc, _cb) {
+    var id = "";
+    async.waterfall([
+        function(callback) {
+            AMGAexec("sequence_next /MagDigitali/Entries/id", callback);
+        },
+        function(entry_id, callback) {
+            id = entry_id;
+            var values = "";
+            for (var attr in fields) {
+                if ((attr.indexOf('__') != 0) && (fields[attr] != '')) {
+                    values += " " + attr + ' \'' + encodeSingleQuotes(fields[attr]) + '\'';
+                }
+            };
+            if (fields['Thumb'] == '') {
+            	 values += " Thumb " + 0;
+            }
+            AMGAexec("addentry /MagDigitali/Entries/WARC/" + entry_id + values, callback);
+        },
+        function(result, callback) {
+            AMGAexec('sequence_next /MagDigitali/Replicas/rep', callback);
+        },
+        function(rep_id, callback) {
+            AMGAexec('addentry /MagDigitali/Replicas/' + rep_id + ' ID ' + id + ' surl ' + fields['__Replica'] + ' enabled 1', callback);
+        }
+
+    ], function(err, result) {
+        if (err) {
+            _cb(err, {message: "Problem while registering the metadata for the WARC file"});
+        } else {
+            _cb();
+        }
+    });
+}
 
 exports.xml2json = function(req, res) {
     var form = new formidable.IncomingForm();
@@ -281,10 +315,12 @@ exports.xml2json = function(req, res) {
             function(callback) {
                 prepareAndRegisterMetadata(cdx.path, xml.path, warc, callback);
             },
-            function(results, callback) {
-            	registerWarcMetadata(fields, warc, callback);
+            function(callback) {
+            	console.log("finito di registrare tutti i metadati. Passiamo al WARC");
+            	//console.log("la callback è" + JSON.stringify(callback));
+                registerWarcMetadata(fields, warc, callback);
             }
-        ], function(err) {
+        ], function(err, results) {
             if (!err) {
                 res.json({
                     success: true
