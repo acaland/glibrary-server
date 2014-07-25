@@ -678,17 +678,27 @@ exports.editEntry = function(req, res) {
                 async.waterfall([
                     async.apply(AMGAexec, 'selectattr /' + repo + '/Replicas:FILE ' + "'ID=" + id +"'"),
                     function (replicas, callback) {
-
+			//console.log(JSON.stringify(replicas));
                         var old_replicas = replicas.split('\n');
                         if (old_replicas[0] == "") {
                             old_replicas.splice(0,1);
                         }
-                        //console.log("old_replicas = " + JSON.stringify(old_replicas) + old_replicas.length);
+                        console.log("old_replicas = " + JSON.stringify(old_replicas) + old_replicas.length);
+			//console.log("new_replicas = " + JSON.stringify(new_replicas) + new_replicas.length);
                         if (old_replicas.length) {
                            
                             async.each(old_replicas, 
                                 function(rep, callback) {
-                                    AMGAexec('rm /' + repo + '/Replicas/' + rep, callback);
+				    // TODO:
+				    // controlla se la vecchia replica èanche una nuova replica, in tal caso non la cancella e non la ricrea, eliminandola da new_replicas
+				    //var pos = new_replicas.indexOf(rep);
+				    //if (pos != -1) {
+				    	// la vecchia replica èanche una nuova replica
+					// eliminiamola dall'array new_replicas
+				    //	new_replicas.splice(pos, 1);
+				    //} else {
+	                                    AMGAexec('rm /' + repo + '/Replicas/' + rep, callback);
+				    //}
                                 }, 
                                 function (err) {
                                     if (!err) {
@@ -711,7 +721,7 @@ exports.editEntry = function(req, res) {
                                 },
                                 //async.apply(, 'sequence_next /' + repo + '/Replicas/rep'),
                                 function(rep_id, callback) {
-                                    AMGAexec('addentry /' + repo + '/Replicas/' + rep_id + ' ID ' + id + ' surl ' + replica + ' enabled 1', callback);
+                                    AMGAexec('addentry /' + repo + '/Replicas/r' + rep_id + ' ID ' + id + ' surl ' + replica + ' enabled 1', callback);
                                 }
                             ], function(err, result) {
                                 if (!err) {
