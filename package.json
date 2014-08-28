@@ -9,6 +9,7 @@
     "express": "3.4.8",
     "jade": "^1.1.5",
     "async": "^0.2.10",
-    "xml2json": "^0.4.0"
+    "xml2json": "^0.4.0",
+    "client-certificate-auth": "^0.3.0"
   }
 }

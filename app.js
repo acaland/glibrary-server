@@ -9,9 +9,31 @@ var user = require('./routes/user');
 var repo = require('./routes/repo');
 var util = require('./routes/util');
 var http = require('http');
+var https = require('https');
+var clientCertificateAuth = require('client-certificate-auth');
 var path = require('path');
+var fs = require('fs');
 
 var app = express();
+
+var opts = {
+  // Server SSL private key and certificate
+  key: fs.readFileSync('/etc/grid-security/hostkey.pem'),
+  cert: fs.readFileSync('/etc/grid-security/hostcert.pem'),
+  // issuer/CA certificate against which the client certificate will be
+  // validated. A certificate that is not signed by a provided CA will be
+  // rejected at the protocol layer.
+  ca: fs.readFileSync('/etc/grid-security/certificates/INFN-CA-2006.pem'),
+  // request a certificate, but don't necessarily reject connections from
+  // clients providing an untrusted or no certificate. This lets us protect only
+  // certain routes, or send a helpful error message to unauthenticated clients.
+  requestCert: true,
+  rejectUnauthorized: true,
+  secureProtocol: 'SSLv3_method'
+};
+
+
+
 
 // all environments
 app.set('port', process.env.PORT || 3000);
@@ -23,6 +45,7 @@ app.use(express.urlencoded());
 app.use(express.methodOverride());
 //app.use(express.bodyParser({keepExtensions:true,uploadDir:path.join(__dirname,'/files')}));
 //app.use(express.multipart());
+app.use(clientCertificateAuth(checkAuth));
 app.use(app.router);
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -66,7 +89,33 @@ app.delete('/:repo/:type/:id', repo.deleteEntry);
 
 app.get('/pwd', repo.pwd);
 
+function checkAuth(cert) {
+ /*
+  * allow access if certificate subject Common Name is 'Doug Prishpreed'.
+  * this is one of many ways you can authorize only certain authenticated
+  * certificate-holders; you might instead choose to check the certificate
+  * fingerprint, or apply some sort of role-based security based on e.g. the OU
+  * field of the certificate. You can also link into another layer of
+  * auth or session middleware here; for instance, you might pass the subject CN
+  * as a username to log the user in to your underlying authentication/session
+  * management layer.
+  */
+  console.log(cert.subject);
+  console.log(cert);
+  return true;
+};
+
+
+
 
 http.createServer(app).listen(app.get('port'), function(){
-  console.log('Express server listening on port ' + app.get('port'));
+  console.log('glibrary API server listening on port ' + app.get('port'));
+});
+
+https.createServer(opts, app).listen(4000, function() {
+	console.log('gLibrary API server listening on port 4000 over HTTPS');
+});
+
+process.on('uncaughtException', function (err) {
+  console.log('Caught uncaughtException: ' + err.stack);
 });
