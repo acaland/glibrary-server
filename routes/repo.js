@@ -114,6 +114,8 @@ exports.getSchema = function(req, res) {
 
 exports.create = function(req, res) {
     var repo = req.params.repo;
+    var path = require('path');
+    var default_thumb = base64_encode(path.join(__dirname, "../images/default.png"));
     commands = [
         'createdir /' + repo,
         'createdir /' + repo + '/Entries',
@@ -129,7 +131,7 @@ exports.create = function(req, res) {
         'sequence_create id /' + repo + '/Types',
         'sequence_create rep /' + repo + '/Replicas',
 	    // dumb thumbdata creation
-	    'addentry /' + repo + "/Thumbs/0 Data '" + base64_encode("images/default.png") + "'"
+	    'addentry /' + repo + "/Thumbs/0 Data '" + default_thumb + "'"
     ];
     async.eachSeries(commands, AMGAexec, function(err) {
         if (err) {

@@ -8,6 +8,7 @@ var routes = require('./routes');
 var user = require('./routes/user');
 var repo = require('./routes/repo');
 var util = require('./routes/util');
+//var utilities = require('./routes/utilities');
 var http = require('http');
 var https = require('https');
 var clientCertificateAuth = require('client-certificate-auth');
@@ -23,7 +24,8 @@ var opts = {
   // issuer/CA certificate against which the client certificate will be
   // validated. A certificate that is not signed by a provided CA will be
   // rejected at the protocol layer.
-  ca: fs.readFileSync('/etc/grid-security/certificates/INFN-CA-2006.pem'),
+  ca: [fs.readFileSync('/etc/grid-security/certificates/INFN-CA-2006.pem'),
+       fs.readFileSync('/etc/grid-security/certificates/IGCA.pem')],
   // request a certificate, but don't necessarily reject connections from
   // clients providing an untrusted or no certificate. This lets us protect only
   // certain routes, or send a helpful error message to unauthenticated clients.
@@ -63,6 +65,7 @@ app.all('*', function(req, res, next) {
 app.get('/', routes.index);
 
 app.post('/xml2json', util.xml2json);
+//app.post('/tiff2png', utilities.tiff2png);
 
 // List available repositories
 app.get('/repositories', repo.list);
@@ -88,6 +91,7 @@ app.put('/:repo/:type', repo.editType);
 app.delete('/:repo/:type/:id', repo.deleteEntry);
 
 app.get('/pwd', repo.pwd);
+
 
 function checkAuth(cert) {
  /*
