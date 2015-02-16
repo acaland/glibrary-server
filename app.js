@@ -31,7 +31,8 @@ var opts = {
   // certain routes, or send a helpful error message to unauthenticated clients.
   requestCert: true,
   rejectUnauthorized: true,
-  secureProtocol: 'SSLv3_method'
+  //secureProtocol: 'SSLv3_method'
+  secureProtocol: 'TLSv1_method'
 };
 
 
@@ -89,7 +90,7 @@ app.post('/:repo/:type/', repo.addEntry);
 app.put('/:repo/:type', repo.editType);
 // remove the Entry with the given id from Type
 app.delete('/:repo/:type/:id', repo.deleteEntry);
-
+//app.delete('/:repo/:type', repo.deleteType);
 app.get('/pwd', repo.pwd);
 
 
